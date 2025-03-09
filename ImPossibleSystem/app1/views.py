@@ -806,13 +806,3 @@ def analytics(request):
     }
     
     return render(request, 'analytics.html', context)
-@require_http_methods(['POST'])
-def update_parking_floor(request):
-    if request.method == 'POST':
-        floor = request.POST.get('floor')
-        # You can add additional logic here to handle floor changes
-        return JsonResponse({
-            'status': 'success',
-            'floor': floor
-        })
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

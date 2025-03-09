@@ -367,15 +367,13 @@ nav {
     color: #E4A400;
 }
 
-.parking-lot {
-    margin-bottom: 90px;
-    max-width: 100%;
-    position: relative;
-}
+
 
 .slottimecontainer{
     margin-top: auto; /* Push time to the bottom */
     margin-left: 10px;
+    position: absolute;
+
 }
 .slot {
     background-color: rgba(49, 136, 27, 0.3);
@@ -1266,11 +1264,13 @@ select.form-control {
     outline: none;
     box-shadow: 0 0 0 3px rgba(79, 129, 189, 0.1);
 }
-.car-image{
+#groundFloor .car-image{
     margin-top: 20px;
     height:auto;
     width: auto;
-    transform: rotate(2deg);
+    transform: rotate(1deg);
+    position: relative;
+    right: 4px;
 }
 
 .parking-lot-container {
@@ -1338,5 +1338,76 @@ select.form-control {
 
 }
 .fulltext{
-    margin-bottom: 10000px;
+    margin-bottom: 1000px;
+}
+#groundFloor .slot:nth-child(1) {
+    left: 50px; 
+    top: 50px; 
+    transform: rotate(30deg);
+    position: relative;
+
+}
+
+#groundFloor .slot:nth-child(2) {
+    left: 150px; 
+    top: -120px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(3) {
+    left: 250px; 
+    top: -290px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(4) {
+    left: 350px; 
+    top: -460px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(5) {
+    left: 450px; 
+    top: -630px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(6) {
+    left: 550px; 
+    top: -800px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(7) {
+    left: 650px; 
+    top: -970px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(8) {
+    left: 950px; 
+    top: -1140px; 
+    transform: rotate(30deg);
+
+}
+
+#groundFloor .slot:nth-child(9) {
+    left: 1050px; 
+    top: -1310px;
+    margin-bottom: -1300px;
+    transform: rotate(30deg);
+}
+.floor-layout{
+    position: relative; /* Allows children to be positioned absolutely inside */
+    display: block; /* Ensures it expands based on child elements */
+    min-width: max-content; /* Expands width dynamically */
+    min-height: max-content; /* Expands height dynamically */
+    overflow: visible; /* Ensures nothing gets clipped */
+    margin-top: -100px;
 }

@@ -36,8 +36,6 @@ urlpatterns = [
     path('sse/parking-updates/', views.parking_slot_updates, name='parking_slot_updates'),
     path('sse/public-slots/', views.public_slots_updates, name='public_slots_updates'),
     path("disagree/", views.disagree, name="disagree"),   
-    path('api/update-floor/', views.update_parking_floor, name='update_parking_floor'),
-
 
 ]
 

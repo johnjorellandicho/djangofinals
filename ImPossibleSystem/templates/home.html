@@ -66,7 +66,7 @@
           <h2 class="slots-title">Total Available Slots</h2>
           <div class="slots-overview">
             <div class="slot-type">
-              <div class="slot-number">{{ car_stats.available }}</div>
+              <div class="slot-number">{{ car_stats.available}}</div>
               <div class="slot-icon"><i class="ri-car-line"></i></div>
               <div class="slot-label">CARS</div>
             </div>
@@ -115,55 +115,52 @@
       
         <br>
         <br>
-        <div class="parking-lot">
-          <!-- Ground Floor -->
-          <div id="groundFloor" class="floor-layout" data-floor="ground">
-              {% for slot in car_stats.slots %}
-                  {% if slot.slot_number <= 8 %}
-                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
-                      {% if slot.status|lower == "occupied" %}
-                      <img src="{% static 'images/carimage.png' %}" class="car-image">
-                      {% endif %}
-                      <div class="slottimecontainer">
-                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
-                      </div>
-                  </div>
-                  {% endif %}
-              {% endfor %}
-          </div>
-      
-          <!-- Basement 1 (initially hidden) -->
-          <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
-              {% for slot in car_stats.slots %}
-                  {% if slot.slot_number > 8 and slot.slot_number <= 16 %}
-                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
-                      {% if slot.status|lower == "occupied" %}
-                      <img src="{% static 'images/carimage.png' %}" class="car-image">
-                      {% endif %}
-                      <div class="slottimecontainer">
-                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
-                      </div>
-                  </div>
-                  {% endif %}
-              {% endfor %}
-          </div>
-      
-          <!-- Basement 2 (initially hidden) -->
-          <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
-              {% for slot in car_stats.slots %}
-                  {% if slot.slot_number > 16 %}
-                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
-                      {% if slot.status|lower == "occupied" %}
-                      <img src="{% static 'images/carimage.png' %}" class="car-image">
-                      {% endif %}
-                      <div class="slottimecontainer">
-                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
-                      </div>
-                  </div>
-                  {% endif %}
-              {% endfor %}
-          </div>
-      </div>
+        <div id="groundFloor" class="floor-layout" data-floor="ground">
+          {% for slot in car_stats.slots %}
+            {% if slot.slot_number <= 9 %}
+            <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+              {% if slot.status|lower == "occupied" %}
+              <img src="{% static 'images/carimage.png' %}" class="car-image">
+              {% endif %}
+              <span class="slottimecontainer">
+                <span class="slot-time">{{ slot.last_updated|time:"h:i A" }}</span>
+              </span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+         <!-- Basement 1 -->
+         <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
+          {% for slot in car_stats.slots %}
+            {% if slot.slot_number > 10 and slot.slot_number <= 37 %}
+            <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+              {% if slot.status|lower == "occupied" %}
+              <img src="{% static 'images/carimage.png' %}" class="car-image">
+              {% endif %}
+              <div class="slottimecontainer">
+                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>   
+
+        <!-- Basement 2 -->
+        <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
+          {% for slot in car_stats.slots %}
+            {% if slot.slot_number <= 38 %}
+            <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+              {% if slot.status|lower == "occupied" %}
+              <img src="{% static 'images/carimage.png' %}" class="car-image">
+              {% endif %}
+              <div class="slottimecontainer">
+                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
           <div class="legend">
             <div class="legend-item">
               <div class="legend-color available"></div>
@@ -471,7 +468,7 @@
       const zoomInButton = document.getElementById('zoomIn');
       const zoomOutButton = document.getElementById('zoomOut');
       const minimizeButton = document.getElementById('minimize');
-      const parkingLot = document.querySelector('.parking-lot');
+      const parkingLot = document.querySelector('floor-layout');
 
       let currentZoomLevel = 1; // Store current zoom level
       let isMinimized = false; // Store minimized state
@@ -485,15 +482,6 @@
         currentZoomLevel -= 0.1;
         currentZoomLevel = Math.max(0.5, currentZoomLevel);
         parkingLot.style.transform = `scale(${currentZoomLevel})`;
-      });
-
-      minimizeButton.addEventListener('click', () => {
-        isMinimized = !isMinimized;
-        if (isMinimized) {
-          parkingLot.classList.add('minimized');
-        } else {
-          parkingLot.classList.remove('minimized');
-        }
       });
 
       // Function to update parking lot and preserve zoom/minimize state
