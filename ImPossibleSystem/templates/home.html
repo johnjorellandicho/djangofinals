@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/home.css' %}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.css" crossorigin="">
+    <title>Home Page</title>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-content">
+        <div class="logo-section">
+          <a href="{% url 'home' %}" class="logo">
+            <img src="{% static 'images/apc_logo.png' %}" alt="APC Logo">
+            <span class="brand-name">ParkSense</span>
+          </a>
+        </div>
+
+        <ul class="nav-links">
+
+          <li>
+            <a href="{% url 'analytics' %}">
+              <i class="ri-pie-chart-box-line"></i>
+              <span>Analytics</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'tools' %}">
+              <i class="ri-tools-fill"></i>
+              <span>Tools</span>
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'anotherhome' %}">
+              <i class="ri-tools-fill"></i>
+              <span>Another Home</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="user-section">
+          <div class="timeanddate">
+            <span class="date" id="current-date"></span>
+            <span>|</span>
+            <span class="time" id="current-time"></span>
+          </div>
+          <div class="user-info">
+            {% if user.is_authenticated %}
+              <span>{{ user.username }}</span>
+            {% else %}
+              <span>Guest</span>
+            {% endif %}
+            <i class="ri-user-4-line"></i>
+          </div>
+          <a href="{% url 'logout' %}" class="logout-btn">
+            <i class="ri-logout-box-line"></i>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <div class="hero-content">
+        <div class="slots-card">
+          <h2 class="slots-title">Total Available Slots</h2>
+          <div class="slots-overview">
+            <div class="slot-type">
+              <div class="slot-number">{{ car_stats.available }}</div>
+              <div class="slot-icon"><i class="ri-car-line"></i></div>
+              <div class="slot-label">CARS</div>
+            </div>
+            <div class="slot-divider"></div>
+            <div class="slot-type">
+              <div class="slot-number">{{ motorcycle_stats.available }}</div>
+              <div class="slot-icon"><i class="ri-bike-line"></i></div>
+              <div class="slot-label">MOTORCYCLES</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="parking-lot-section">
+          <h2><i class="ri-parking-box-line"></i> Parking Lot Layout</h2>
+          <div class="zoom-controls">
+            <button id="zoomIn">+</button>
+            <button id="zoomOut">-</button>
+          </div>
+
+          <div class="legend"></div>
+          <br>
+          <div class="availability-info">
+            <span class ="avail_text">Available Slots: </span>
+            <div> &nbsp;&nbsp;
+              <span class="slot-icon"><i class="ri-car-line"></i>
+                <span id="current-floor-available">&nbsp;{{ car_stats.available }}</span> 
+                <span class="slot-icon"><i class="ri-bike-line"></i> </span>
+                <span id="current-floor-available">&nbsp;{{ motorcycle_stats.available }}</span> 
+              </span>
+              {% if car_stats.available == 0 and motorcycle_stats.available == 0 %}
+                <span class="fulltext">
+                  <span class="full-text">FULL</span>
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="form-group">
+            <label>
+              <select name="level_parking" class="form-control" id="levelparking">
+                <option value="ground" selected>Ground Floor</option>
+                <option value="b1">Basement 1</option>
+                <option value="b2">Basement 2</option>
+              </select>
+            </label>
+        </div>
+      
+        <br>
+        <br>
+        <div class="parking-lot">
+          <!-- Ground Floor -->
+          <div id="groundFloor" class="floor-layout" data-floor="ground">
+              {% for slot in car_stats.slots %}
+                  {% if slot.slot_number <= 8 %}
+                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+                      {% if slot.status|lower == "occupied" %}
+                      <img src="{% static 'images/carimage.png' %}" class="car-image">
+                      {% endif %}
+                      <div class="slottimecontainer">
+                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+                      </div>
+                  </div>
+                  {% endif %}
+              {% endfor %}
+          </div>
+      
+          <!-- Basement 1 (initially hidden) -->
+          <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
+              {% for slot in car_stats.slots %}
+                  {% if slot.slot_number > 8 and slot.slot_number <= 16 %}
+                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+                      {% if slot.status|lower == "occupied" %}
+                      <img src="{% static 'images/carimage.png' %}" class="car-image">
+                      {% endif %}
+                      <div class="slottimecontainer">
+                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+                      </div>
+                  </div>
+                  {% endif %}
+              {% endfor %}
+          </div>
+      
+          <!-- Basement 2 (initially hidden) -->
+          <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
+              {% for slot in car_stats.slots %}
+                  {% if slot.slot_number > 16 %}
+                  <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
+                      {% if slot.status|lower == "occupied" %}
+                      <img src="{% static 'images/carimage.png' %}" class="car-image">
+                      {% endif %}
+                      <div class="slottimecontainer">
+                          <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+                      </div>
+                  </div>
+                  {% endif %}
+              {% endfor %}
+          </div>
+      </div>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-color available"></div>
+              <span>Available</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color occupied"></div>
+              <span>Occupied</span>
+            </div>
+          </div>
+        </div>
+
+        {% if user.is_superuser %}
+        <div class="simulation-card">
+          <h2><i class="ri-tools-line"></i> Simulation Controls</h2>
+          <div class="simulation-controls">
+            <div class="control-section">
+              <h3>Car Slots</h3>
+              {% for slot in car_stats.slots %}
+              <div class="control-item">
+                <span>Car {{ slot.slot_number }}</span>
+                <button class="simulate-btn {% if slot.status == 'occupied' %}occupied{% endif %}" 
+                        data-sensor-id="{{ slot.sensor_id }}"
+                        data-slot-type="car"
+                        data-status="{{ slot.status }}">
+                  {% if slot.status == 'occupied' %}
+                    Remove Vehicle
+                  {% else %}
+                    Park Vehicle
+                  {% endif %}
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+            
+            <div class="control-section">
+              <h3>Motorcycle Slots</h3>
+              {% for slot in motorcycle_stats.slots %}
+              <div class="control-item">
+                <span>Motorcycle {{ slot.slot_number }}</span>
+                <button class="simulate-btn {% if slot.status == 'occupied' %}occupied{% endif %}" 
+                        data-sensor-id="{{ slot.sensor_id }}"
+                        data-slot-type="motorcycle"
+                        data-status="{{ slot.status }}">
+                  {% if slot.status == 'occupied' %}
+                    Remove Vehicle
+                  {% else %}
+                    Park Vehicle
+                  {% endif %}
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="banner-card">
+          <div class="background-image">
+            <img src="{% static 'images/apcbuilding_blue123.png' %}" alt="APC Building">
+          </div>
+          <div class="banner-content">
+            <div class="ram-logo">
+              <img src="{% static 'images/rams-clear.png' %}" alt="APC Ram">
+            </div>
+            <div class="banner-text">
+              <h1>Monitoring Parking</h1>
+              <p>at your fingertips.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Function to get CSRF token from cookies
+      function getCookie(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+              const cookies = document.cookie.split(';');
+              for (let i = 0; i < cookies.length; i++) {
+                  const cookie = cookies[i].trim();
+                  if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                      cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                      break;
+                  }
+              }
+          }
+          return cookieValue;
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const csrftoken = getCookie('csrftoken');
+        
+        // Add event listeners to simulate buttons
+        const simulateButtons = document.querySelectorAll('.simulate-btn');
+        simulateButtons.forEach(button => {
+          button.addEventListener('click', async function() {
+            const sensorId = this.dataset.sensorId;
+            const slotType = this.dataset.slotType;
+            const currentStatus = this.dataset.status;
+            
+            // If current status is 'occupied', simulate vehicle leaving (150cm)
+            // Otherwise, simulate vehicle parking (20cm)
+            const distance = currentStatus === 'occupied' ? 150 : 20;
+            const isOccupied = currentStatus !== 'occupied';
+            
+            try {
+              const response = await fetch('/api/sensor-reading/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrftoken
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  sensor_id: sensorId,
+                  distance: distance,
+                  is_occupied: isOccupied
+                })
+              });
+              
+              if (response.ok) {
+                // Update button text and class immediately
+                this.textContent = isOccupied ? 'Remove Vehicle' : 'Park Vehicle';
+                this.classList.toggle('occupied', isOccupied);
+                this.dataset.status = isOccupied ? 'occupied' : 'available';
+                
+                // Reload after a short delay to show the change
+                setTimeout(() => location.reload(), 300);
+              } else {
+                const errorData = await response.json();
+                console.error('Failed to send sensor reading:', errorData.error);
+                alert('Failed to update sensor reading. Please try again.');
+              }
+            } catch (error) {
+              console.error('Error:', error);
+              alert('Failed to connect to the server. Please try again.');
+            }
+          });
+        });
+        
+        // Server-Sent Events for real-time updates
+        const eventSource = new EventSource('/sse/parking-updates/');
+        
+        // Detailed event logging
+        eventSource.addEventListener('open', function(event) {
+            console.log('SSE connection opened successfully');
+        });
+        
+        eventSource.addEventListener('error', function(event) {
+            console.error('EventSource failed with full error object:', event);
+            
+            // More detailed error investigation
+            if (event.target.readyState === EventSource.CLOSED) {
+                console.error('EventSource connection closed');
+            } else if (event.target.readyState === EventSource.CONNECTING) {
+                console.error('EventSource attempting to reconnect');
+            }
+            
+            // Attempt to get more context
+            fetch('/sse/parking-updates/')
+                .then(response => {
+                    console.log('Direct fetch response:', response.status, response.statusText);
+                    return response.text();
+                })
+                .then(text => {
+                    console.log('Response text:', text);
+                })
+                .catch(fetchError => {
+                    console.error('Direct fetch error:', fetchError);
+                });
+            
+            eventSource.close(); // Close the connection on error
+        });
+        
+        eventSource.onmessage = function(event) {
+          try {
+            console.log('Raw SSE event data:', event.data);
+            const parkingUpdates = JSON.parse(event.data);
+            console.log('Parsed SSE data:', parkingUpdates);
+            
+            // Update car slots
+            console.log('Updating car slots:', parkingUpdates.car_slots);
+            parkingUpdates.car_slots.forEach(slot => {
+              console.log('Processing car slot:', slot);
+              
+              // Update simulation button
+              const simulationButton = document.querySelector(`.simulate-btn[data-sensor-id="${slot.sensor_id}"]`);
+              if (simulationButton) {
+                simulationButton.textContent = slot.status === 'occupied' ? 'Remove Vehicle' : 'Park Vehicle';
+                simulationButton.classList.toggle('occupied', slot.status === 'occupied');
+                simulationButton.dataset.status = slot.status;
+              }
+              
+              // Update parking layout slot
+              const parkingSlotElement = document.querySelector(`.parking-lot .slot[data-sensor-id="${slot.sensor_id}"]`);
+              if (parkingSlotElement) {
+                // Update slot status class
+                parkingSlotElement.classList.remove('available', 'occupied');
+                parkingSlotElement.classList.add(slot.status);
+                
+                // Update status text
+                const statusElement = parkingSlotElement.querySelector('.slot-status');
+                if (statusElement) {
+                  statusElement.textContent = slot.status.charAt(0).toUpperCase() + slot.status.slice(1);
+                }
+                
+                // Update last updated time
+                const timeElement = parkingSlotElement.querySelector('.slot-time');
+                if (timeElement && slot.last_updated) {
+                  const lastUpdatedDate = new Date(slot.last_updated);
+                  timeElement.textContent = lastUpdatedDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                }
+                
+              } else {
+                console.warn(`No parking layout element found for car sensor: ${slot.sensor_id}`);
+              }
+            });
+            // Update motorcycle slots
+            console.log('Updating motorcycle slots:', parkingUpdates.motorcycle_slots);
+            parkingUpdates.motorcycle_slots.forEach(slot => {
+              console.log('Processing motorcycle slot:', slot);
+              
+              // Update simulation button
+              const simulationButton = document.querySelector(`.simulate-btn[data-sensor-id="${slot.sensor_id}"]`);
+              if (simulationButton) {
+                simulationButton.textContent = slot.status === 'occupied' ? 'Remove Vehicle' : 'Park Vehicle';
+                simulationButton.classList.toggle('occupied', slot.status === 'occupied');
+                simulationButton.dataset.status = slot.status;
+              }
+              
+              // Update parking layout slot
+              const parkingSlotElement = document.querySelector(`.parking-lot .slot[data-sensor-id="${slot.sensor_id}"]`);
+              if (parkingSlotElement) {
+                // Update slot status class
+                parkingSlotElement.classList.remove('available', 'occupied');
+                parkingSlotElement.classList.add(slot.status);
+                
+                // Update status text
+                const statusElement = parkingSlotElement.querySelector('.slot-status');
+                if (statusElement) {
+                  statusElement.textContent = slot.status.charAt(0).toUpperCase() + slot.status.slice(1);
+                }
+                
+                // Update last updated time
+                const timeElement = parkingSlotElement.querySelector('.slot-time');
+                if (timeElement && slot.last_updated) {
+                  const lastUpdatedDate = new Date(slot.last_updated);
+                  timeElement.textContent = lastUpdatedDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                }
+              } else {
+                console.warn(`No parking layout element found for motorcycle sensor: ${slot.sensor_id}`);
+              }
+            });
+            
+            // Update total available slots display
+            const carSlotElements = document.querySelectorAll('.parking-lot .slot[data-slot-type="car"]');
+            const motorcycleSlotElements = document.querySelectorAll('.parking-lot .slot[data-slot-type="motorcycle"]');
+            
+            const carAvailableSlots = Array.from(carSlotElements)
+              .filter(el => el.classList.contains('available')).length;
+            const motorcycleAvailableSlots = Array.from(motorcycleSlotElements)
+              .filter(el => el.classList.contains('available')).length;
+            
+            // Safely update slot number displays
+            const carSlotNumberElement = document.querySelector('.slot-type:nth-child(1) .slot-number');
+            const motorcycleSlotNumberElement = document.querySelector('.slot-type:nth-child(2) .slot-number');
+            
+            if (carSlotNumberElement) {
+              carSlotNumberElement.textContent = carAvailableSlots;
+            }
+            
+            if (motorcycleSlotNumberElement) {
+              motorcycleSlotNumberElement.textContent = motorcycleAvailableSlots;
+            }
+            
+            console.log('SSE Update:', {
+              carAvailableSlots,
+              motorcycleAvailableSlots
+            });
+          } catch (error) {
+            console.error('Error parsing SSE data:', error);
+          }
+        };
+      });
+      
+    </script>
+
+    <script>
+      function updateDateTime() {
+      const now = new Date();
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', dateOptions);
+      document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US');
+      }
+      // Update every second
+      setInterval(updateDateTime, 1000);
+      
+      // Call once to initialize
+      updateDateTime();
+
+
+      // Zoom and Minimize functionality
+      const zoomInButton = document.getElementById('zoomIn');
+      const zoomOutButton = document.getElementById('zoomOut');
+      const minimizeButton = document.getElementById('minimize');
+      const parkingLot = document.querySelector('.parking-lot');
+
+      let currentZoomLevel = 1; // Store current zoom level
+      let isMinimized = false; // Store minimized state
+
+      zoomInButton.addEventListener('click', () => {
+        currentZoomLevel += 0.1;
+        parkingLot.style.transform = `scale(${currentZoomLevel})`;
+      });
+
+      zoomOutButton.addEventListener('click', () => {
+        currentZoomLevel -= 0.1;
+        currentZoomLevel = Math.max(0.5, currentZoomLevel);
+        parkingLot.style.transform = `scale(${currentZoomLevel})`;
+      });
+
+      minimizeButton.addEventListener('click', () => {
+        isMinimized = !isMinimized;
+        if (isMinimized) {
+          parkingLot.classList.add('minimized');
+        } else {
+          parkingLot.classList.remove('minimized');
+        }
+      });
+
+      // Function to update parking lot and preserve zoom/minimize state
+      function updateParkingLot(newOccupancyData) {
+        // ... your code to update the parking lot HTML ...
+
+        parkingLot.style.transform = `scale(${currentZoomLevel})`; // Reapply zoom
+        if (isMinimized) {
+          parkingLot.classList.add('minimized'); // Reapply minimized state
+        }
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+        // Get the select element
+        const levelSelector = document.getElementById('levelparking');
+
+        if (!levelSelector) {
+        console.error("Dropdown not found!");
+        return;
+        }
+        
+        // Function to show the selected floor and hide others
+        function showSelectedFloor() {
+            // Get the selected value
+            const selectedValue = levelSelector.value;
+            console.log("Selected floor:", selectedValue); // Debug log
+            
+            // Hide all floors
+            document.getElementById('groundFloor').style.display = 'none';
+            document.getElementById('basement1').style.display = 'none';
+            document.getElementById('basement2').style.display = 'none';
+            
+            // Show the selected floor
+            if (selectedValue === 'ground') {
+                document.getElementById('groundFloor').style.display = 'block';
+            } else if (selectedValue === 'b1') {
+                document.getElementById('basement1').style.display = 'block';
+            } else if (selectedValue === 'b2') {
+                document.getElementById('basement2').style.display = 'block';
+            }
+            
+            // Preserve zoom and minimize state
+            const parkingLot = document.querySelector('.parking-lot');
+            const currentZoomLevel = parseFloat(parkingLot.style.transform.replace('scale(', '')) || 1;
+            const isMinimized = parkingLot.classList.contains('minimized');
+            
+            // Reapply zoom and minimize state
+            parkingLot.style.transform = `scale(${currentZoomLevel})`;
+            if (isMinimized) {
+                parkingLot.classList.add('minimized');
+            }
+        }
+        
+        // Initial display
+        showSelectedFloor();
+        
+        // Set up change event listener
+        levelSelector.addEventListener('change', showSelectedFloor);
+    });
+ 
+    </script>
+
+  </body>
+</html>

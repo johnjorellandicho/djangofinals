@@ -1,0 +1,24 @@
+{
+    "name": "ParkSense Django Development",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "batisteo.vscode-django",
+                "mongodb.mongodb-vscode"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": true
+            }
+        }
+    },
+    "postCreateCommand": "pip install --user -r requirements.txt",
+    "forwardPorts": [8000, 27017],
+    "remoteUser": "vscode"
+}
