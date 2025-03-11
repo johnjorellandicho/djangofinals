@@ -58,7 +58,7 @@ def HomePage(request):
     
     # Calculate statistics with dynamic total based on availability
     car_stats = {
-        'total': car_slots.filter(status='available').count(),  
+        'total': car_slots.count(),  
         'available': car_slots.filter(status='available').count(),
         'occupied': car_slots.filter(status='occupied').count(),
         'maintenance': car_slots.filter(status='maintenance').count(),
@@ -66,7 +66,7 @@ def HomePage(request):
     }
     
     motorcycle_stats = {
-        'total': motorcycle_slots.filter(status='available').count(),  
+        'total': motorcycle_slots.count(),  
         'available': motorcycle_slots.filter(status='available').count(),
         'occupied': motorcycle_slots.filter(status='occupied').count(),
         'maintenance': motorcycle_slots.filter(status='maintenance').count(),

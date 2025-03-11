@@ -1384,25 +1384,19 @@ select.form-control {
 }
 
 #groundFloor .slot:nth-child(7) {
-    left: 650px; 
-    top: -970px; 
+    left: 950px; 
+    top: -950px; 
     transform: rotate(30deg);
 
 }
 
 #groundFloor .slot:nth-child(8) {
-    left: 950px; 
-    top: -1140px; 
-    transform: rotate(30deg);
-
-}
-
-#groundFloor .slot:nth-child(9) {
     left: 1050px; 
-    top: -1310px;
-    margin-bottom: -1300px;
+    top: -1100px; 
     transform: rotate(30deg);
+    margin-bottom: -1000px;
 }
+
 .floor-layout{
     position: relative; /* Allows children to be positioned absolutely inside */
     display: block; /* Ensures it expands based on child elements */

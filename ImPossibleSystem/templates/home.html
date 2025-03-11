@@ -117,7 +117,7 @@
         <br>
         <div id="groundFloor" class="floor-layout" data-floor="ground">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number <= 9 %}
+            {% if slot.slot_number <= 8 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -133,7 +133,7 @@
          <!-- Basement 1 -->
          <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number > 9 and slot.slot_number <= 37 %}
+            {% if slot.slot_number > 8 and slot.slot_number <= 38 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -149,7 +149,7 @@
         <!-- Basement 2 -->
         <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number <= 37 %}
+            {% if slot.slot_number <= 38 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
