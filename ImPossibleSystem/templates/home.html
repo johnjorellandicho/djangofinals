@@ -133,7 +133,7 @@
          <!-- Basement 1 -->
          <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number > 9 and slot.slot_number <= 36 %}
+            {% if slot.slot_number > 8 and slot.slot_number <= 36 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -149,7 +149,7 @@
         <!-- Basement 2 -->
         <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number <= 37 %}
+            {% if slot.slot_number > 36 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -559,14 +559,16 @@
             }
             
             // Preserve zoom and minimize state
-            const parkingLot = document.querySelector('.parking-lot');
-            const currentZoomLevel = parseFloat(parkingLot.style.transform.replace('scale(', '')) || 1;
-            const isMinimized = parkingLot.classList.contains('minimized');
-            
-            // Reapply zoom and minimize state
-            parkingLot.style.transform = `scale(${currentZoomLevel})`;
-            if (isMinimized) {
-                parkingLot.classList.add('minimized');
+            const parkingLot = document.querySelector('.parking-lot-section');
+            if (parkingLot) {
+                const currentZoomLevel = parseFloat(parkingLot.style.transform?.replace('scale(', '')) || 1;
+                const isMinimized = parkingLot.classList.contains('minimized');
+                
+                // Reapply zoom and minimize state
+                parkingLot.style.transform = `scale(${currentZoomLevel})`;
+                if (isMinimized) {
+                    parkingLot.classList.add('minimized');
+                }
             }
         }
         

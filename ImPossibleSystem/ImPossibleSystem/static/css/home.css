@@ -830,7 +830,6 @@ nav {
 
 .simulate-btn:not(.occupied):hover {
     background-color: #43A047;
-}
     border: none;
 }
 
