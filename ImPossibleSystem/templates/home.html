@@ -92,9 +92,9 @@
             <span class ="avail_text">Available Slots: </span>
             <div> &nbsp;&nbsp;
               <span class="slot-icon"><i class="ri-car-line"></i>
-                <span id="current-floor-available">&nbsp;{{ car_stats.available }}</span> 
+                <span id="car-available-count">&nbsp;{{ car_stats.available }}</span> 
                 <span class="slot-icon"><i class="ri-bike-line"></i> </span>
-                <span id="current-floor-available">&nbsp;{{ motorcycle_stats.available }}</span> 
+                <span id="motorcycle-available-count">&nbsp;{{ motorcycle_stats.available }}</span> 
               </span>
               {% if car_stats.available == 0 and motorcycle_stats.available == 0 %}
                 <span class="fulltext">
@@ -133,7 +133,7 @@
          <!-- Basement 1 -->
          <div id="basement1" class="floor-layout" data-floor="b1" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number > 8 and slot.slot_number <= 38 %}
+            {% if slot.slot_number > 9 and slot.slot_number <= 36 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -149,7 +149,7 @@
         <!-- Basement 2 -->
         <div id="basement2" class="floor-layout" data-floor="b2" style="display: none;">
           {% for slot in car_stats.slots %}
-            {% if slot.slot_number <= 38 %}
+            {% if slot.slot_number <= 37 %}
             <div class="slot {{ slot.status|lower }}" data-sensor-id="{{ slot.sensor_id }}" data-slot-type="car">
               {% if slot.status|lower == "occupied" %}
               <img src="{% static 'images/carimage.png' %}" class="car-image">
@@ -356,8 +356,8 @@
                 simulationButton.dataset.status = slot.status;
               }
               
-              // Update parking layout slot
-              const parkingSlotElement = document.querySelector(`.parking-lot .slot[data-sensor-id="${slot.sensor_id}"]`);
+              // Update parking layout slot - search in all floors, not just visible ones
+              const parkingSlotElement = document.querySelector(`.slot[data-sensor-id="${slot.sensor_id}"][data-slot-type="car"]`);
               if (parkingSlotElement) {
                 // Update slot status class
                 parkingSlotElement.classList.remove('available', 'occupied');
@@ -377,7 +377,7 @@
                 }
                 
               } else {
-                console.warn(`No parking layout element found for car sensor: ${slot.sensor_id}`);
+                console.log(`No parking layout element found for car sensor: ${slot.sensor_id}`);
               }
             });
             // Update motorcycle slots
@@ -394,7 +394,7 @@
               }
               
               // Update parking layout slot
-              const parkingSlotElement = document.querySelector(`.parking-lot .slot[data-sensor-id="${slot.sensor_id}"]`);
+              const parkingSlotElement = document.querySelector(`.slot[data-sensor-id="${slot.sensor_id}"][data-slot-type="motorcycle"]`);
               if (parkingSlotElement) {
                 // Update slot status class
                 parkingSlotElement.classList.remove('available', 'occupied');
@@ -413,35 +413,44 @@
                   timeElement.textContent = lastUpdatedDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
                 }
               } else {
-                console.warn(`No parking layout element found for motorcycle sensor: ${slot.sensor_id}`);
+                console.log(`No parking layout element found for motorcycle sensor: ${slot.sensor_id}`);
               }
             });
             
-            // Update total available slots display
-            const carSlotElements = document.querySelectorAll('.parking-lot .slot[data-slot-type="car"]');
-            const motorcycleSlotElements = document.querySelectorAll('.parking-lot .slot[data-slot-type="motorcycle"]');
+            // Update total available slots display - fix the counting logic
+            // Only count slots for the current floor
+            const currentFloor = document.getElementById('levelparking').value;
+            const currentFloorLayout = document.querySelector(`.floor-layout[data-floor="${currentFloor}"]`);
             
-            const carAvailableSlots = Array.from(carSlotElements)
-              .filter(el => el.classList.contains('available')).length;
-            const motorcycleAvailableSlots = Array.from(motorcycleSlotElements)
-              .filter(el => el.classList.contains('available')).length;
-            
-            // Safely update slot number displays
-            const carSlotNumberElement = document.querySelector('.slot-type:nth-child(1) .slot-number');
-            const motorcycleSlotNumberElement = document.querySelector('.slot-type:nth-child(2) .slot-number');
-            
-            if (carSlotNumberElement) {
-              carSlotNumberElement.textContent = carAvailableSlots;
+            // Count only slots on the current floor
+            let carAvailableSlots = 0;
+            if (currentFloorLayout) {
+              const floorCarSlots = currentFloorLayout.querySelectorAll('.slot[data-slot-type="car"]');
+              carAvailableSlots = Array.from(floorCarSlots).filter(el => el.classList.contains('available')).length;
             }
             
-            if (motorcycleSlotNumberElement) {
-              motorcycleSlotNumberElement.textContent = motorcycleAvailableSlots;
-            }
+            // Log the correct count
+            console.log('Current floor:', currentFloor);
+            console.log('Available car slots on current floor:', carAvailableSlots);
             
-            console.log('SSE Update:', {
-              carAvailableSlots,
-              motorcycleAvailableSlots
+            // Update the display
+            const carAvailableElements = document.querySelectorAll('#car-available-count');
+            carAvailableElements.forEach(element => {
+              element.textContent = ' ' + carAvailableSlots;
             });
+            
+            // Update FULL text visibility
+            const fullTextElement = document.querySelector('.fulltext');
+            if (fullTextElement) {
+              const motorcycleAvailableElement = document.querySelector('#motorcycle-available-count');
+              const motorcycleAvailable = motorcycleAvailableElement ? parseInt(motorcycleAvailableElement.textContent) : 0;
+              
+              if (carAvailableSlots === 0 && motorcycleAvailable === 0) {
+                fullTextElement.style.display = 'inline';
+              } else {
+                fullTextElement.style.display = 'none';
+              }
+            }
           } catch (error) {
             console.error('Error parsing SSE data:', error);
           }
@@ -539,6 +548,50 @@
         
         // Set up change event listener
         levelSelector.addEventListener('change', showSelectedFloor);
+    });
+
+    function updateCarStats() {
+      const currentFloor = document.getElementById('levelparking').value;
+      const carSlots = document.querySelectorAll('.slot[data-slot-type="car"]');
+      
+      // Count available slots on the current floor
+      let availableCount = 0;
+      carSlots.forEach(slot => {
+        // Check if the slot belongs to the current floor
+        const floorLayout = slot.closest('.floor-layout');
+        if (floorLayout && floorLayout.dataset.floor === currentFloor && slot.classList.contains('available')) {
+          availableCount++;
+        }
+      });
+      
+      // Update the display
+      const carAvailableElements = document.querySelectorAll('#car-available-count');
+      carAvailableElements.forEach(element => {
+        element.textContent = ' ' + availableCount;
+      });
+      
+      // Update FULL text visibility
+      const fullTextElement = document.querySelector('.fulltext');
+      if (fullTextElement) {
+        const motorcycleAvailableElement = document.querySelector('#motorcycle-available-count');
+        const motorcycleAvailable = motorcycleAvailableElement ? parseInt(motorcycleAvailableElement.textContent) : 0;
+        
+        if (availableCount === 0 && motorcycleAvailable === 0) {
+          fullTextElement.style.display = 'inline';
+        } else {
+          fullTextElement.style.display = 'none';
+        }
+      }
+    }
+
+    // Call updateCarStats when the floor selection changes
+    document.getElementById('levelparking').addEventListener('change', function() {
+      updateCarStats();
+    });
+
+    // Call updateCarStats on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCarStats();
     });
  
     </script>

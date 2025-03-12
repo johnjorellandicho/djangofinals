@@ -1403,5 +1403,5 @@ select.form-control {
     min-width: max-content; /* Expands width dynamically */
     min-height: max-content; /* Expands height dynamically */
     overflow: visible; /* Ensures nothing gets clipped */
-    margin-top: -100px;
 }
+
