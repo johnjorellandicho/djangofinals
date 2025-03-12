@@ -58,7 +58,7 @@ class ParkingSlot(models.Model):
     vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     sensor_id = models.CharField(max_length=50, unique=True)
-    last_updated = models.DateTimeField(auto_now=True)
+    last_status_change = models.DateTimeField(auto_now_add=True)  # When the status last changed
     current_distance = models.FloatField(default=150.0)  # Default to empty slot distance
     # Add this line:
     is_occupied = models.BooleanField(default=False)
@@ -81,7 +81,12 @@ class ParkingSlot(models.Model):
         
         # Update basic info
         self.current_distance = distance
-        self.status = 'occupied' if is_occupied else 'available'
+        new_status = 'occupied' if is_occupied else 'available'
+        
+        # Update status and timestamp if it changed
+        if new_status != self.status:
+            self.status = new_status
+            self.last_status_change = now
         
         # Handle analytics
         if is_occupied and old_status != 'occupied':
@@ -99,7 +104,7 @@ class ParkingSlot(models.Model):
             
         # Clean up old 24h data
         cutoff_time = now - timedelta(hours=24)
-        if self.last_updated < cutoff_time:
+        if self.last_status_change < cutoff_time:
             self.last_24h_occupancy_count = 0
             self.last_24h_occupancy_time = timedelta()
         

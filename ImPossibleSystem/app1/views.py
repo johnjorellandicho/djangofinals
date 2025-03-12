@@ -314,8 +314,12 @@ def public_slots_updates(request):
                     available_car_slots = car_slots.filter(status='available').count()
                     available_motorcycle_slots = motorcycle_slots.filter(status='available').count()
                 
+                # Calculate total available slots
+                total_available = available_car_slots + available_motorcycle_slots
+                
                 # Format the data for the public display
                 data = {
+                    'total_available': total_available,
                     'available_car_slots': available_car_slots,
                     'available_motorcycle_slots': available_motorcycle_slots
                 }
@@ -425,14 +429,14 @@ def parking_slot_updates(request):
                             {
                                 'sensor_id': slot.sensor_id,
                                 'status': slot.status,
-                                'last_updated': slot.last_updated.isoformat() if slot.last_updated else None
+                                'last_status_change': slot.last_status_change.isoformat() if slot.last_status_change else None
                             } for slot in car_slots
                         ],
                         'motorcycle_slots': [
                             {
                                 'sensor_id': slot.sensor_id,
                                 'status': slot.status,
-                                'last_updated': slot.last_updated.isoformat() if slot.last_updated else None
+                                'last_status_change': slot.last_status_change.isoformat() if slot.last_status_change else None
                             } for slot in motorcycle_slots
                         ]
                     }
@@ -450,7 +454,7 @@ def parking_slot_updates(request):
                             slot_info = {
                                 'sensor_id': slot_id,
                                 'status': slot_data['status'],
-                                'last_updated': slot_data.get('last_updated')
+                                'last_status_change': slot_data.get('last_status_change')
                             }
                             if slot_data['vehicle_type'] == 'car':
                                 car_slots.append(slot_info)

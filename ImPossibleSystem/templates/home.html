@@ -123,7 +123,7 @@
               <img src="{% static 'images/carimage.png' %}" class="car-image">
               {% endif %}
               <span class="slottimecontainer">
-                <span class="slot-time">{{ slot.last_updated|time:"h:i A" }}</span>
+                <span class="slot-time">{{ slot.last_status_change|time:"h:i A" }}</span>
               </span>
             </div>
             {% endif %}
@@ -139,7 +139,7 @@
               <img src="{% static 'images/carimage.png' %}" class="car-image">
               {% endif %}
               <div class="slottimecontainer">
-                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_status_change|time:"h:i A" }}</div>
               </div>
             </div>
             {% endif %}
@@ -155,7 +155,7 @@
               <img src="{% static 'images/carimage.png' %}" class="car-image">
               {% endif %}
               <div class="slottimecontainer">
-                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_updated|time:"h:i A" }}</div>
+                <div class="slot-time">{{ slot.slot_number }} {{ slot.last_status_change|time:"h:i A" }}</div>
               </div>
             </div>
             {% endif %}
@@ -304,7 +304,7 @@
         });
         
         // Server-Sent Events for real-time updates
-        const eventSource = new EventSource('/sse/parking-updates/');
+        const eventSource = new EventSource('/sse/public-slots-updates/');
         
         // Detailed event logging
         eventSource.addEventListener('open', function(event) {
@@ -342,6 +342,31 @@
             console.log('Raw SSE event data:', event.data);
             const parkingUpdates = JSON.parse(event.data);
             console.log('Parsed SSE data:', parkingUpdates);
+
+            // Update total available slots
+            const carSlotsElement = document.querySelector('.slot-type:first-child .slot-number');
+            const motorcycleSlotsElement = document.querySelector('.slot-type:last-child .slot-number');
+            const totalSlotsElement = document.querySelector('.slots-title');
+
+            if (carSlotsElement) {
+                carSlotsElement.textContent = parkingUpdates.available_car_slots;
+            }
+            if (motorcycleSlotsElement) {
+                motorcycleSlotsElement.textContent = parkingUpdates.available_motorcycle_slots;
+            }
+            if (totalSlotsElement) {
+                totalSlotsElement.textContent = `Total Available Slots: ${parkingUpdates.total_available}`;
+            }
+
+            // Update the availability info section
+            const carAvailableCount = document.getElementById('car-available-count');
+            const motorcycleAvailableCount = document.getElementById('motorcycle-available-count');
+            if (carAvailableCount) {
+                carAvailableCount.textContent = ` ${parkingUpdates.available_car_slots}`;
+            }
+            if (motorcycleAvailableCount) {
+                motorcycleAvailableCount.textContent = ` ${parkingUpdates.available_motorcycle_slots}`;
+            }
             
             // Update car slots
             console.log('Updating car slots:', parkingUpdates.car_slots);
@@ -369,11 +394,12 @@
                   statusElement.textContent = slot.status.charAt(0).toUpperCase() + slot.status.slice(1);
                 }
                 
-                // Update last updated time
+                // Update status change time
                 const timeElement = parkingSlotElement.querySelector('.slot-time');
-                if (timeElement && slot.last_updated) {
-                  const lastUpdatedDate = new Date(slot.last_updated);
-                  timeElement.textContent = lastUpdatedDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                if (timeElement && slot.last_status_change) {
+                  const statusChangeDate = new Date(slot.last_status_change);
+                  const formattedTime = statusChangeDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                  timeElement.textContent = formattedTime;
                 }
                 
               } else {
@@ -406,11 +432,12 @@
                   statusElement.textContent = slot.status.charAt(0).toUpperCase() + slot.status.slice(1);
                 }
                 
-                // Update last updated time
+                // Update status change time
                 const timeElement = parkingSlotElement.querySelector('.slot-time');
-                if (timeElement && slot.last_updated) {
-                  const lastUpdatedDate = new Date(slot.last_updated);
-                  timeElement.textContent = lastUpdatedDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                if (timeElement && slot.last_status_change) {
+                  const statusChangeDate = new Date(slot.last_status_change);
+                  const formattedTime = statusChangeDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true});
+                  timeElement.textContent = formattedTime;
                 }
               } else {
                 console.log(`No parking layout element found for motorcycle sensor: ${slot.sensor_id}`);

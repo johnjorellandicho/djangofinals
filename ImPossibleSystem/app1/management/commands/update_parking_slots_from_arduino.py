@@ -130,7 +130,14 @@ class Command(BaseCommand):
                                     
                                     slot_updates[slot_key]['current_distance'] = distance
                                     slot_updates[slot_key]['status'] = 'occupied' if status == 'occupied' else 'available'
-                                    slot_updates[slot_key]['last_updated'] = now
+                                    # Only update last_status_change if status is different
+                                    try:
+                                        slot = ParkingSlot.objects.get(slot_number=slot_number)
+                                        if slot.status != ('occupied' if status == 'occupied' else 'available'):
+                                            slot_updates[slot_key]['last_status_change'] = now
+                                    except ParkingSlot.DoesNotExist:
+                                        # For new slots, set initial last_status_change
+                                        slot_updates[slot_key]['last_status_change'] = now
 
                             # Check if it's time for a bulk update (every 5 seconds)
                             current_time = time.time()
@@ -242,7 +249,8 @@ class Command(BaseCommand):
                         # Update slot attributes
                         slot.status = new_status
                         slot.current_distance = update_data['current_distance']
-                        slot.last_updated = now
+                        if new_status != old_status:
+                            slot.last_status_change = now
                         slot.save()
 
                         # Create parking history record
@@ -259,7 +267,7 @@ class Command(BaseCommand):
                             'sensor_id': slot.sensor_id,
                             'status': slot.status,
                             'current_distance': slot.current_distance,
-                            'last_updated': slot.last_updated.isoformat()
+                            'last_status_change': slot.last_status_change.isoformat()
                         }
 
                         # Categorize slots

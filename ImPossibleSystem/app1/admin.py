@@ -4,7 +4,7 @@ from .models import ParkingSlot, ParkingHistory
 # Register your models here.
 @admin.register(ParkingSlot)
 class ParkingSlotAdmin(admin.ModelAdmin):
-    list_display = ('slot_number', 'vehicle_type', 'status', 'sensor_id', 'last_updated')
+    list_display = ('slot_number', 'vehicle_type', 'status', 'sensor_id', 'last_status_change')
     list_filter = ('vehicle_type', 'status')
     search_fields = ('slot_number', 'sensor_id')
     ordering = ('slot_number',)
