@@ -28,7 +28,7 @@ urlpatterns = [
     path("analytics/", views.analytics, name="analytics"),
     path("tools/", views.tools, name="tools"),
     path("anotherhome/", views.anotherhome, name="anotherhome"),    
-    
+    path("diagnose-slots/", views.diagnose_slots, name="diagnose_slots"),
     # API endpoints
     path("api/sensor-reading/", api.update_sensor_reading, name="update_sensor_reading"),
     path("api/analytics/", api.get_parking_analytics, name="get_parking_analytics"),

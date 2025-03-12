@@ -94,15 +94,9 @@
             <!-- Charts Section -->
             <div class="charts-section">
                 <!-- Occupancy Trend -->
-                <div class="chart-card">
+                <div class="chart-card full-width">
                     <h3><i class="ri-line-chart-line"></i> 24-Hour Occupancy Trend</h3>
                     <canvas id="occupancyTrendChart"></canvas>
-                </div>
-
-                <!-- Vehicle Type Distribution -->
-                <div class="chart-card">
-                    <h3><i class="ri-pie-chart-2-line"></i> Vehicle Distribution</h3>
-                    <canvas id="vehicleDistributionChart"></canvas>
                 </div>
 
                 <!-- Utilization by Slot -->
@@ -243,18 +237,19 @@
       // Call once to initialize
       updateDateTime();
         // Chart configurations
-        const occupancyData = {{ occupancy_data|safe }};
-        const vehicleData = {{ vehicle_data|safe }};
-        const utilizationData = {{ utilization_data|safe }};
+        const chartData = {
+            occupancy: JSON.parse('{{ occupancy_data|escapejs }}'),
+            utilization: JSON.parse('{{ utilization_data|escapejs }}')
+        };
 
         // Occupancy Trend Chart
         new Chart(document.getElementById('occupancyTrendChart'), {
             type: 'line',
             data: {
-                labels: occupancyData.labels,
+                labels: chartData.occupancy.labels,
                 datasets: [{
                     label: 'Occupancy Rate',
-                    data: occupancyData.values,
+                    data: chartData.occupancy.values,
                     borderColor: '#3498db',
                     tension: 0.4,
                     fill: true,
@@ -281,36 +276,17 @@
             }
         });
 
-        // Vehicle Distribution Chart
-        new Chart(document.getElementById('vehicleDistributionChart'), {
-            type: 'doughnut',
-            data: {
-                labels: vehicleData.labels,
-                datasets: [{
-                    data: vehicleData.values,
-                    backgroundColor: ['#3498db', '#e74c3c']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
+
 
         // Slot Utilization Chart
         new Chart(document.getElementById('slotUtilizationChart'), {
             type: 'bar',
             data: {
-                labels: utilizationData.labels,
+                labels: chartData.utilization.labels,
                 datasets: [{
                     label: 'Utilization Rate',
-                    data: utilizationData.values,
-                    backgroundColor: utilizationData.colors
+                    data: chartData.utilization.values,
+                    backgroundColor: chartData.utilization.colors
                 }]
             },
             options: {
@@ -407,13 +383,6 @@
         }
     });
     
-    function updateDateTime() {
-        const now = new Date();
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', dateOptions);
-        document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US');
-    }
-    
     // Toast notification function
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
@@ -436,21 +405,32 @@
         }, 3000);
     }
     
-    // Show Django messages as toasts
-    {% if messages %}
-    {% for message in messages %}
-        showToast('{{ message|escapejs }}', 'info');
-    {% endfor %}
-    {% endif %}
-    
-    // Update every second
-    setInterval(updateDateTime, 1000);
-    
-    // Call once to initialize
-    updateDateTime();
-    
-    // Show initial fields based on default selection
-    document.getElementById('reportType').dispatchEvent(new Event('change'));
+    // Initialize components when DOM is ready
+    window.addEventListener('load', function() {
+        // Django messages array
+        var messages = JSON.parse('{% if messages %}[{% for message in messages %}"{{ message|escapejs }}",{% endfor %}]{% else %}[]{% endif %}');
+
+        // Initialize app
+        function initApp() {
+            // Update date and time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Initialize report type selector
+            var reportType = document.getElementById('reportType');
+            if (reportType) {
+                reportType.dispatchEvent(new Event('change'));
+            }
+            
+            // Show Django messages if any
+            messages.forEach(function(message) {
+                showToast(message, 'info');
+            });
+        }
+        
+        // Run initialization
+        initApp();
+    });
     </script>
     
     

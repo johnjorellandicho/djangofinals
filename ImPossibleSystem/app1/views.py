@@ -512,7 +512,7 @@ def analytics(request):
     
     # Calculate current statistics
     total_slots = parking_slots.count()
-    occupied_slots = parking_slots.filter(status='Occupied').count()
+    occupied_slots = parking_slots.filter(status='occupied').count()
     occupancy_rate = (occupied_slots / total_slots * 100) if total_slots > 0 else 0
     
     # Calculate real 24h utilization for each slot
@@ -522,8 +522,8 @@ def analytics(request):
     for slot in parking_slots:
         # Count occupied time in last 24h for this slot
         occupied_records = ParkingHistory.objects.filter(
-            slot_id=slot.id,
-            status='Occupied',
+            slot=slot,
+            status='occupied',
             timestamp__gte=day_ago,
             timestamp__lte=now
         )
@@ -535,7 +535,7 @@ def analytics(request):
                 total_occupied_time += record.duration
         
         # Add utilization rate directly to the slot object
-        slot.real_time_utilization = (total_occupied_time.total_seconds() / (24 * 3600)) * 100
+        slot.real_time_utilization = min((total_occupied_time.total_seconds() / (24 * 3600)) * 100, 100)
     
     # Calculate average duration and format durations
     avg_duration = timedelta()
@@ -576,24 +576,24 @@ def analytics(request):
         
         # Get all records that overlap with this hour
         records = ParkingHistory.objects.filter(
+            timestamp__gte=start_time,
             timestamp__lt=end_time,
-            status='Occupied'
+            status='occupied'
         )
         
         # Calculate total occupied time in this hour
         total_occupied_seconds = 0
         for record in records:
-            if record.duration:
+            if record.duration and isinstance(record.duration, timedelta):
                 # Convert duration to total occupied time in this hour
                 record_start = record.timestamp
                 record_end = record.timestamp + record.duration
                 
                 # Only count the overlap with current hour
-                if record_end > start_time:
-                    overlap_start = max(record_start, start_time)
-                    overlap_end = min(record_end, end_time)
-                    overlap_duration = overlap_end - overlap_start
-                    total_occupied_seconds += overlap_duration.total_seconds()
+                overlap_start = max(record_start, start_time)
+                overlap_end = min(record_end, end_time)
+                overlap_duration = overlap_end - overlap_start
+                total_occupied_seconds += overlap_duration.total_seconds()
         
         # Calculate occupancy rate for this hour (as percentage of total slot-hours)
         total_slot_seconds = total_slots * 3600  # total available seconds (slots * 1 hour)
@@ -605,11 +605,18 @@ def analytics(request):
         'values': occupancy_values
     }
     
-    # 2. Vehicle Distribution
-    vehicle_counts = parking_slots.values('vehicle_type').annotate(count=Count('id'))
-    vehicle_data = {
-        'labels': [dict(ParkingSlot.VEHICLE_TYPES)[vt['vehicle_type']] for vt in vehicle_counts],
-        'values': [vt['count'] for vt in vehicle_counts]
+    # 2. Slot Status Distribution
+    status_counts = parking_slots.values('status').annotate(count=Count('id'))
+    status_colors = {
+        'available': '#2ecc71',  # Green
+        'occupied': '#e74c3c',   # Red
+        'reserved': '#f1c40f',   # Yellow
+        'maintenance': '#95a5a6'  # Gray
+    }
+    status_data = {
+        'labels': [status['status'].title() for status in status_counts],
+        'values': [status['count'] for status in status_counts],
+        'colors': [status_colors[status['status']] for status in status_counts]
     }
     
     # 3. Slot Utilization (using real-time calculated values)
@@ -793,7 +800,6 @@ def analytics(request):
         'peak_hours': peak_time,
         'parking_slots': parking_slots,
         'occupancy_data': json.dumps(occupancy_data),
-        'vehicle_data': json.dumps(vehicle_data),
         'utilization_data': json.dumps(utilization_data),
         'current_year': timezone.now().year,
         'available_years': list(range(timezone.now().year, timezone.now().year - 5, -1)),  # Last 5 years
@@ -806,3 +812,53 @@ def analytics(request):
     }
     
     return render(request, 'analytics.html', context)
+
+def diagnose_slots(request):
+    from .models import ParkingSlot
+    from django.http import JsonResponse
+    
+    # Get all car slots
+    car_slots = ParkingSlot.objects.filter(vehicle_type='car')
+    
+    # Prepare diagnostic data
+    ground_floor_slots = []
+    basement1_slots = []
+    basement2_slots = []
+    
+    for slot in car_slots:
+        slot_data = {
+            'slot_number': slot.slot_number,
+            'status': slot.status,
+            'is_occupied': slot.is_occupied,
+            'current_distance': slot.current_distance,
+            'last_updated': slot.last_updated.isoformat() if slot.last_updated else None
+        }
+        
+        if slot.slot_number <= 9:
+            ground_floor_slots.append(slot_data)
+        elif slot.slot_number <= 37:
+            basement1_slots.append(slot_data)
+        else:
+            basement2_slots.append(slot_data)
+    
+    # Return diagnostic data
+    return JsonResponse({
+        'total_car_slots': car_slots.count(),
+        'available_car_slots': car_slots.filter(status='available').count(),
+        'occupied_car_slots': car_slots.filter(status='occupied').count(),
+        'ground_floor': {
+            'total': len(ground_floor_slots),
+            'available': sum(1 for s in ground_floor_slots if s['status'] == 'available'),
+            'slots': ground_floor_slots
+        },
+        'basement1': {
+            'total': len(basement1_slots),
+            'available': sum(1 for s in basement1_slots if s['status'] == 'available'),
+            'slots': basement1_slots
+        },
+        'basement2': {
+            'total': len(basement2_slots),
+            'available': sum(1 for s in basement2_slots if s['status'] == 'available'),
+            'slots': basement2_slots
+        }
+    })

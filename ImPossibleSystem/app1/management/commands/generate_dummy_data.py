@@ -7,43 +7,95 @@ import random
 class Command(BaseCommand):
     help = 'Generate dummy parking history data for testing'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--clear',
+            action='store_true',
+            help='Clear existing parking history before generating new data',
+        )
+
+    def _get_peak_hour_probability(self, hour):
+        """Return probability of occupancy based on hour of day"""
+        # Morning peak (7-9 AM)
+        if 7 <= hour <= 9:
+            return 0.8
+        # Lunch peak (12-2 PM)
+        elif 12 <= hour <= 14:
+            return 0.7
+        # Evening peak (5-7 PM)
+        elif 17 <= hour <= 19:
+            return 0.9
+        # Late night (11 PM-5 AM)
+        elif hour >= 23 or hour <= 5:
+            return 0.2
+        # Normal hours
+        else:
+            return 0.5
+
     def handle(self, *args, **kwargs):
+        if kwargs['clear']:
+            ParkingHistory.objects.all().delete()
+            self.stdout.write(self.style.SUCCESS('Cleared existing parking history'))
+
         now = timezone.now()
-        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_time = now - timedelta(hours=24)
         
         # Get all parking slots
-        slots = ParkingSlot.objects.all()
+        slots = list(ParkingSlot.objects.all())
         if not slots:
             self.stdout.write(self.style.ERROR('No parking slots found. Please create parking slots first.'))
             return
-            
-        # Generate 20 random parking records for today
-        for _ in range(20):
-            # Pick a random slot
-            slot = random.choice(slots)
-            
-            # Generate random start time between start of day and now
-            max_start = int((now - start_of_day).total_seconds())
-            random_seconds = random.randint(0, max_start)
-            timestamp = start_of_day + timedelta(seconds=random_seconds)
-            
-            # Generate random duration between 30 minutes and 4 hours
-            duration = timedelta(minutes=random.randint(30, 240))
-            
-            # Create parking record
-            ParkingHistory.objects.create(
-                slot=slot,
-                timestamp=timestamp,
-                status='occupied',
-                duration=duration
-            )
-            
-            # Update slot analytics
-            slot.total_occupancy_count += 1
-            slot.total_occupancy_time += duration
-            if timestamp >= (now - timedelta(hours=24)):
-                slot.last_24h_occupancy_count += 1
-                slot.last_24h_occupancy_time += duration
+
+        # Reset 24h analytics
+        for slot in slots:
+            slot.last_24h_occupancy_count = 0
+            slot.last_24h_occupancy_time = timedelta()
             slot.save()
-            
-        self.stdout.write(self.style.SUCCESS('Successfully generated 20 dummy parking records'))
+
+        # Generate data for each hour in the last 24 hours
+        for hour in range(24):
+            current_time = start_time + timedelta(hours=hour)
+            probability = self._get_peak_hour_probability(current_time.hour)
+
+            # For each slot, decide if it should be occupied this hour
+            for slot in slots:
+                if random.random() < probability:
+                    # Generate 1-3 occupancies per hour
+                    num_occupancies = random.randint(1, 3)
+                    remaining_minutes = 60
+                    
+                    for _ in range(num_occupancies):
+                        # Calculate duration ensuring we don't exceed the hour
+                        max_duration = min(remaining_minutes, random.randint(10, 40))
+                        duration = timedelta(minutes=max_duration)
+                        remaining_minutes -= max_duration
+
+                        # Calculate occupancy rate
+                        occupied_slots = sum(1 for s in slots if random.random() < probability)
+                        occupancy_rate = (occupied_slots / len(slots)) * 100
+
+                        # Create parking record
+                        ParkingHistory.objects.create(
+                            slot=slot,
+                            timestamp=current_time,
+                            status='occupied',
+                            duration=duration,
+                            occupancy_rate=occupancy_rate,
+                            occupied_count=occupied_slots
+                        )
+
+                        # Update slot analytics
+                        slot.total_occupancy_count += 1
+                        slot.total_occupancy_time += duration
+                        slot.last_24h_occupancy_count += 1
+                        slot.last_24h_occupancy_time += duration
+                        slot.save()
+
+                        if remaining_minutes < 10:
+                            break
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Successfully generated 24 hours of parking data with realistic patterns'
+            )
+        )
