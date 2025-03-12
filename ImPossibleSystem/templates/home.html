@@ -388,6 +388,21 @@
                 parkingSlotElement.classList.remove('available', 'occupied');
                 parkingSlotElement.classList.add(slot.status);
                 
+                // Handle car image
+                let carImage = parkingSlotElement.querySelector('.car-image');
+                if (slot.status === 'occupied') {
+                  if (!carImage) {
+                    carImage = document.createElement('img');
+                    carImage.src = '/static/images/carimage.png';
+                    carImage.className = 'car-image';
+                    parkingSlotElement.insertBefore(carImage, parkingSlotElement.firstChild);
+                  }
+                } else {
+                  if (carImage) {
+                    carImage.remove();
+                  }
+                }
+                
                 // Update status text
                 const statusElement = parkingSlotElement.querySelector('.slot-status');
                 if (statusElement) {
@@ -425,6 +440,21 @@
                 // Update slot status class
                 parkingSlotElement.classList.remove('available', 'occupied');
                 parkingSlotElement.classList.add(slot.status);
+                
+                // Handle motorcycle image
+                let motorcycleImage = parkingSlotElement.querySelector('.motorcycle-image');
+                if (slot.status === 'occupied') {
+                  if (!motorcycleImage) {
+                    motorcycleImage = document.createElement('img');
+                    motorcycleImage.src = '/static/images/motorcycleimage.png';
+                    motorcycleImage.className = 'motorcycle-image';
+                    parkingSlotElement.insertBefore(motorcycleImage, parkingSlotElement.firstChild);
+                  }
+                } else {
+                  if (motorcycleImage) {
+                    motorcycleImage.remove();
+                  }
+                }
                 
                 // Update status text
                 const statusElement = parkingSlotElement.querySelector('.slot-status');
