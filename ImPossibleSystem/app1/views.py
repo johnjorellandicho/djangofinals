@@ -597,17 +597,22 @@ def analytics(request):
     current_year = timezone.now().year
     
     # Prepare chart data
-    # 1. Occupancy Trend (24h)
+    # 1. Occupancy Trend (24h from 12 AM to 12 AM)
     now = timezone.now()
-    hours = [(now - timedelta(hours=x)).strftime('%I %p') for x in range(23, -1, -1)]
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     
-    # Get real occupancy data for the last 24 hours
+    # Generate fixed hours from 12 AM to 11 PM
+    hours = [f"{hour:02d}:00" for hour in range(24)]
+    
+    # Get occupancy data for each hour of the current day
     occupancy_values = []
-    for hour in range(23, -1, -1):
-        start_time = now - timedelta(hours=hour+1)
-        end_time = now - timedelta(hours=hour)
+    
+    for hour in range(24):
+        # Calculate time window for this hour
+        start_time = today_start + timedelta(hours=hour)
+        end_time = start_time + timedelta(hours=1)
         
-        # Get all records that overlap with this hour
+        # Get all records for this hour
         records = ParkingHistory.objects.filter(
             timestamp__gte=start_time,
             timestamp__lt=end_time,
@@ -618,7 +623,7 @@ def analytics(request):
         total_occupied_seconds = 0
         for record in records:
             if record.duration and isinstance(record.duration, timedelta):
-                # Convert duration to total occupied time in this hour
+                # Get the actual duration within this hour
                 record_start = record.timestamp
                 record_end = record.timestamp + record.duration
                 
@@ -628,7 +633,7 @@ def analytics(request):
                 overlap_duration = overlap_end - overlap_start
                 total_occupied_seconds += overlap_duration.total_seconds()
         
-        # Calculate occupancy rate for this hour (as percentage of total slot-hours)
+        # Calculate occupancy rate for this hour
         total_slot_seconds = total_slots * 3600  # total available seconds (slots * 1 hour)
         hourly_rate = (total_occupied_seconds / total_slot_seconds * 100) if total_slot_seconds > 0 else 0
         occupancy_values.append(round(hourly_rate, 1))
@@ -652,10 +657,29 @@ def analytics(request):
         'colors': [status_colors[status['status']] for status in status_counts]
     }
     
-    # 3. Slot Utilization (using real-time calculated values)
+    # 3. Slot Utilization (fixed 24-hour window from 12 AM)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     utilization_data = {
         'labels': [f"Slot {slot.slot_number}" for slot in parking_slots],
-        'values': [round(slot.real_time_utilization, 1) for slot in parking_slots],
+        'values': [
+            round(
+                ParkingHistory.objects.filter(
+                    slot=slot,
+                    timestamp__gte=today_start,
+                    status='occupied'
+                ).aggregate(
+                    total_duration=Sum('duration')
+                )['total_duration'].total_seconds() / (24 * 3600) * 100
+                if ParkingHistory.objects.filter(
+                    slot=slot,
+                    timestamp__gte=today_start,
+                    status='occupied'
+                ).exists()
+                else 0,
+                1
+            )
+            for slot in parking_slots
+        ],
         'colors': ['#3498db' if slot.vehicle_type == 'car' else '#e74c3c' for slot in parking_slots]
     }
     
