@@ -46,10 +46,14 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('No parking slots found. Please create parking slots first.'))
             return
 
-        # Reset 24h analytics
+        # Reset analytics
         for slot in slots:
             slot.last_24h_occupancy_count = 0
             slot.last_24h_occupancy_time = timedelta()
+            slot.total_occupancy_count = 0
+            slot.total_occupancy_time = timedelta()
+            slot.status = 'available'
+            slot.occupation_start = None
             slot.save()
 
         # Generate data for each hour in the last 24 hours
@@ -70,16 +74,30 @@ class Command(BaseCommand):
                         duration = timedelta(minutes=max_duration)
                         remaining_minutes -= max_duration
 
-                        # Calculate occupancy rate
+                        # Create 'occupied' record
+                        occupied_start = current_time
                         occupied_slots = sum(1 for s in slots if random.random() < probability)
                         occupancy_rate = (occupied_slots / len(slots)) * 100
 
-                        # Create parking record
                         ParkingHistory.objects.create(
                             slot=slot,
-                            timestamp=current_time,
+                            timestamp=occupied_start,
                             status='occupied',
                             duration=duration,
+                            occupancy_rate=occupancy_rate,
+                            occupied_count=occupied_slots
+                        )
+
+                        # Create 'available' record after duration
+                        available_time = occupied_start + duration
+                        occupied_slots = sum(1 for s in slots if random.random() < probability)
+                        occupancy_rate = (occupied_slots / len(slots)) * 100
+
+                        ParkingHistory.objects.create(
+                            slot=slot,
+                            timestamp=available_time,
+                            status='available',
+                            duration=timedelta(),  # No duration for available state
                             occupancy_rate=occupancy_rate,
                             occupied_count=occupied_slots
                         )

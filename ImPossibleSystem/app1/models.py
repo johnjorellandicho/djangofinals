@@ -83,10 +83,39 @@ class ParkingSlot(models.Model):
         self.current_distance = distance
         new_status = 'occupied' if is_occupied else 'available'
         
+        # Calculate duration for the previous state
+        duration = timedelta()
+        if old_status == 'occupied' and self.occupation_start:
+            duration = now - self.occupation_start
+        
         # Update status and timestamp if it changed
         if new_status != self.status:
             self.status = new_status
             self.last_status_change = now
+            
+            # Calculate occupancy rate for the completed state
+            total_slots = ParkingSlot.objects.count()
+            occupied_slots = ParkingSlot.objects.filter(status='occupied').count()
+            
+            # For occupied slots, calculate the occupancy rate based on duration
+            if old_status == 'occupied' and duration:
+                # Calculate hours for this parking duration
+                hours = duration.total_seconds() / 3600
+                # Calculate total available hours for this slot
+                total_hours = (now - self.last_status_change).total_seconds() / 3600
+                occupancy_rate = (hours / total_hours * 100) if total_hours > 0 else 0
+            else:
+                # For non-occupied states, use the current occupancy rate
+                occupancy_rate = (occupied_slots / total_slots * 100) if total_slots > 0 else 0
+            
+            ParkingHistory.objects.create(
+                slot=self,
+                timestamp=now,
+                status=old_status,  # Record the completed state
+                duration=duration,
+                occupancy_rate=occupancy_rate,
+                occupied_count=occupied_slots
+            )
         
         # Handle analytics
         if is_occupied and old_status != 'occupied':
@@ -108,24 +137,6 @@ class ParkingSlot(models.Model):
             self.last_24h_occupancy_count = 0
             self.last_24h_occupancy_time = timedelta()
         
-        # Record history
-        total_slots = ParkingSlot.objects.count()
-        occupied_slots = ParkingSlot.objects.filter(status='occupied').count()
-        occupancy_rate = (occupied_slots / total_slots * 100) if total_slots > 0 else 0
-        
-        duration = timedelta()
-        if self.status == 'occupied' and self.occupation_start:
-            duration = now - self.occupation_start
-        
-        ParkingHistory.objects.create(
-            slot=self,
-            timestamp=now,
-            status=self.status,
-            duration=duration,
-            occupancy_rate=occupancy_rate,
-            occupied_count=occupied_slots
-        )
-            
         self.save()
         
     @property

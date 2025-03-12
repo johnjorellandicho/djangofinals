@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import HttpResponse, StreamingHttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
 from django.db.models import Avg, Count, Sum
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time as datetime_time
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 import openpyxl.utils
@@ -16,7 +16,6 @@ from pymongo import MongoClient
 from django.views.decorators.http import require_GET
 from django.core.cache import caches
 import json
-import time
 import logging
 from django.views.decorators.http import require_http_methods
 
@@ -567,6 +566,36 @@ def analytics(request):
     peak_slots = parking_slots.filter(status='Occupied').count()
     peak_time = timezone.now().strftime('%I:%M %p')
     
+    # Prepare months and years for export form
+    months = [
+        {'number': 1, 'name': 'January'},
+        {'number': 2, 'name': 'February'},
+        {'number': 3, 'name': 'March'},
+        {'number': 4, 'name': 'April'},
+        {'number': 5, 'name': 'May'},
+        {'number': 6, 'name': 'June'},
+        {'number': 7, 'name': 'July'},
+        {'number': 8, 'name': 'August'},
+        {'number': 9, 'name': 'September'},
+        {'number': 10, 'name': 'October'},
+        {'number': 11, 'name': 'November'},
+        {'number': 12, 'name': 'December'}
+    ]
+    
+    # Get years from parking history using aggregation
+    current_year = timezone.now().year
+    years_query = ParkingHistory.objects.values('timestamp').distinct()
+    available_years = set()
+    for entry in years_query:
+        available_years.add(entry['timestamp'].year)
+    
+    if not available_years:
+        available_years = {current_year}
+    available_years = sorted(list(available_years))
+    
+    current_month = timezone.now().month
+    current_year = timezone.now().year
+    
     # Prepare chart data
     # 1. Occupancy Trend (24h)
     now = timezone.now()
@@ -646,17 +675,14 @@ def analytics(request):
                 target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             else:
                 target_date = today.date()
-            start_date = datetime.combine(target_date, time.min)
-            end_date = datetime.combine(target_date, time.max)
+            start_date = datetime.combine(target_date, datetime_time(0, 0))
+            end_date = datetime.combine(target_date, datetime_time(23, 59, 59, 999999))
             ws.title = f"Daily Report {target_date}"
             filename = f'ParkSense_Daily_Report_{target_date}.xlsx'
         
         elif report_type == 'monthly':
-            month_str = request.GET.get('month')
-            if month_str:
-                year, month = map(int, month_str.split('-'))
-            else:
-                year, month = today.year, today.month
+            month = int(request.GET.get('month', today.month))
+            year = int(request.GET.get('year', today.year))
             start_date = datetime(year, month, 1)
             if month == 12:
                 end_date = datetime(year + 1, 1, 1) - timedelta(seconds=1)
@@ -690,8 +716,27 @@ def analytics(request):
 
         # Calculate summary statistics
         total_slots = ParkingSlot.objects.count()
-        avg_occupancy = history_data.aggregate(Avg('occupancy_rate'))['occupancy_rate__avg'] or 0
-        avg_duration = history_data.aggregate(Avg('duration'))['duration__avg'] or timedelta()
+        
+        # Get all records for occupied slots
+        occupied_records = history_data.filter(status='occupied')
+        
+        # Calculate total duration and hours
+        total_duration = occupied_records.aggregate(Sum('duration'))['duration__sum'] or timedelta()
+        total_hours = total_duration.total_seconds() / 3600
+        
+        # Calculate period hours for all slots
+        total_slots = ParkingSlot.objects.count()
+        period_hours = (end_date - start_date).total_seconds() / 3600
+        period_hours_total = period_hours * total_slots
+        
+        # Calculate average occupancy rate
+        avg_occupancy = occupied_records.aggregate(Avg('occupancy_rate'))['occupancy_rate__avg'] or 0
+        
+        # Calculate average duration per parking
+        total_parkings = occupied_records.count()
+        avg_duration = total_duration / total_parkings if total_parkings > 0 else timedelta()
+        
+        # Find peak occupancy time
         peak_data = history_data.order_by('-occupied_count').first()
         peak_time = peak_data.timestamp.strftime('%I:%M %p') if peak_data else 'No data'
 
@@ -733,12 +778,26 @@ def analytics(request):
         row += 1
 
         for vehicle_type in ['Car', 'Motorcycle']:
+            # Get slots for this vehicle type
             slots = ParkingSlot.objects.filter(vehicle_type=vehicle_type.lower())
             total = slots.count()
-            type_data = history_data.filter(slot__vehicle_type=vehicle_type.lower())
-            avg_occupied = type_data.aggregate(Avg('occupied_count'))['occupied_count__avg'] or 0
-            avg_available = total - avg_occupied
+            
+            # Get records for this vehicle type with occupied status
+            type_data = history_data.filter(
+                slot__vehicle_type=vehicle_type.lower(),
+                status='occupied'
+            )
+            
+            # Calculate total duration and hours
+            total_duration = type_data.aggregate(Sum('duration'))['duration__sum'] or timedelta()
+            total_hours = total_duration.total_seconds() / 3600
+            
+            # Calculate average occupancy rate
             avg_rate = type_data.aggregate(Avg('occupancy_rate'))['occupancy_rate__avg'] or 0
+            
+            # Calculate average occupied slots based on occupancy rate
+            avg_occupied = avg_rate * total / 100
+            avg_available = total - avg_occupied
 
             ws.cell(row=row, column=1, value=vehicle_type)
             ws.cell(row=row, column=2, value=total)
@@ -766,20 +825,40 @@ def analytics(request):
 
         slots = ParkingSlot.objects.all().order_by('vehicle_type', 'slot_number')
         for slot in slots:
+            # Get records for this slot
             slot_data = history_data.filter(slot=slot)
-            total_duration = slot_data.aggregate(Sum('duration'))['duration__sum'] or timedelta()
+            
+            # Get records with occupied status
+            occupied_data = slot_data.filter(status='occupied')
+            
+            # Calculate total occupied duration
+            total_duration = occupied_data.aggregate(Sum('duration'))['duration__sum'] or timedelta()
             total_hours = total_duration.total_seconds() / 3600
-            total_count = slot_data.count()
+            
+            # Get count of occupied parkings
+            total_count = occupied_data.count()
+            
+            # Calculate average duration per parking
             avg_duration = total_hours / total_count if total_count > 0 else 0
-            period_hours = (end_date - start_date).total_seconds() / 3600
-            utilization_rate = (total_hours / period_hours * 100) if period_hours > 0 else 0
+            
+            # Calculate utilization rate from recorded occupancy rates
+            utilization_rate = occupied_data.aggregate(Avg('occupancy_rate'))['occupancy_rate__avg'] or 0
 
-            ws.cell(row=row, column=1, value=f"{slot.vehicle_type} {slot.slot_number}")
-            ws.cell(row=row, column=2, value=slot.get_vehicle_type_display())
-            ws.cell(row=row, column=3, value=f"{total_hours:.1f}")
+            # Format slot number and vehicle type
+            ws.cell(row=row, column=1, value=slot.slot_number)
+            ws.cell(row=row, column=2, value=slot.vehicle_type.title())
+            
+            # Format statistics with proper decimal places
+            ws.cell(row=row, column=3, value=f"{total_hours:.2f}")
             ws.cell(row=row, column=4, value=total_count)
-            ws.cell(row=row, column=5, value=f"{avg_duration:.1f}")
+            ws.cell(row=row, column=5, value=f"{avg_duration:.2f}")
             ws.cell(row=row, column=6, value=f"{utilization_rate:.1f}%")
+            
+            # Center align all cells in the row
+            for col in range(1, 7):
+                cell = ws.cell(row=row, column=col)
+                cell.alignment = centered
+            
             row += 1
 
         # Adjust column widths
@@ -805,8 +884,8 @@ def analytics(request):
         'parking_slots': parking_slots,
         'occupancy_data': json.dumps(occupancy_data),
         'utilization_data': json.dumps(utilization_data),
-        'current_year': timezone.now().year,
-        'available_years': list(range(timezone.now().year, timezone.now().year - 5, -1)),  # Last 5 years
+        'current_year': current_year,
+        'available_years': available_years,
         'months': [
             {'number': i, 'name': datetime(2000, i, 1).strftime('%B')} 
             for i in range(1, 13)
