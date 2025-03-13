@@ -117,6 +117,39 @@ class ParkingSlot(models.Model):
                 occupied_count=occupied_slots
             )
         
+        # Always update Redis cache with the latest parking data
+        from django_redis import get_redis_connection
+        redis_client = get_redis_connection('parking_updates')
+        
+        # Save the current status before querying all slots
+        self.save()
+        
+        # Get all car and motorcycle slots
+        car_slots = ParkingSlot.objects.filter(vehicle_type='car')
+        motorcycle_slots = ParkingSlot.objects.filter(vehicle_type='motorcycle')
+        
+        # Format the data for Redis cache
+        parking_updates = {
+            'car_slots': [
+                {
+                    'slot_number': slot.slot_number,
+                    'sensor_id': slot.sensor_id,
+                    'status': slot.status
+                } for slot in car_slots
+            ],
+            'motorcycle_slots': [
+                {
+                    'slot_number': slot.slot_number,
+                    'sensor_id': slot.sensor_id,
+                    'status': slot.status
+                } for slot in motorcycle_slots
+            ]
+        }
+        
+        # Update Redis cache
+        import json
+        redis_client.set('latest_parking_updates', json.dumps(parking_updates), ex=60)
+        
         # Handle analytics
         if is_occupied and old_status != 'occupied':
             # Vehicle just parked

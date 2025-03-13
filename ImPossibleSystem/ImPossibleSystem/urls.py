@@ -34,7 +34,7 @@ urlpatterns = [
     path("api/analytics/", api.get_parking_analytics, name="get_parking_analytics"),
     path("api/log-maintenance/", api.log_maintenance, name="log_maintenance"),
     path('sse/parking-updates/', views.parking_slot_updates, name='parking_slot_updates'),
-    path('sse/public-slots/', views.public_slots_updates, name='public_slots_updates'),
+    path('sse/public-slots-updates/', views.public_slots_updates, name='public_slots_updates'),
     path("disagree/", views.disagree, name="disagree"),   
 
 ]

@@ -262,6 +262,118 @@ def tools(request):
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
+# Configure SSE logger
+sse_logger = logging.getLogger('sse_events')
+sse_logger.setLevel(logging.DEBUG)
+
+def stream_public_slots():
+    sse_logger.info("Starting public slots SSE stream")
+    while True:
+        try:
+            # Get the Redis cache
+            cache = caches['parking_updates']
+            sse_logger.debug("Fetching data from Redis cache")
+            
+            # Try to get parking data from cache
+            parking_data = cache.get('latest_parking_updates')
+            
+            # Initialize variables
+            car_slots_data = []
+            motorcycle_slots_data = []
+            
+            if parking_data:
+                sse_logger.debug("Found data in Redis cache")
+                # Parse the cached JSON data
+                try:
+                    if isinstance(parking_data, str):
+                        parking_stats = json.loads(parking_data)
+                        sse_logger.debug("Successfully parsed JSON string from cache")
+                    else:
+                        parking_stats = parking_data
+                        sse_logger.debug("Using direct data from cache")
+                    
+                    car_slots_data = parking_stats.get('car_slots', [])
+                    motorcycle_slots_data = parking_stats.get('motorcycle_slots', [])
+                    
+                    available_car_slots = sum(1 for slot in car_slots_data 
+                                            if slot.get('status') == 'available')
+                    available_motorcycle_slots = sum(1 for slot in motorcycle_slots_data 
+                                                   if slot.get('status') == 'available')
+                    sse_logger.info(f"Calculated available slots - Cars: {available_car_slots}, Motorcycles: {available_motorcycle_slots}")
+                except (json.JSONDecodeError, KeyError) as e:
+                    sse_logger.error(f"Error parsing cache data: {e}")
+                    # Fallback to database
+                    sse_logger.warning("Cache parse failed, falling back to database")
+                    car_slots = ParkingSlot.objects.filter(vehicle_type='car')
+                    motorcycle_slots = ParkingSlot.objects.filter(vehicle_type='motorcycle')
+                    available_car_slots = car_slots.filter(status='available').count()
+                    available_motorcycle_slots = motorcycle_slots.filter(status='available').count()
+                    
+                    # Format slots data from database
+                    car_slots_data = [
+                        {
+                            'slot_number': slot.slot_number,
+                            'sensor_id': slot.sensor_id,
+                            'status': slot.status
+                        } for slot in car_slots
+                    ]
+                    motorcycle_slots_data = [
+                        {
+                            'slot_number': slot.slot_number,
+                            'sensor_id': slot.sensor_id,
+                            'status': slot.status
+                        } for slot in motorcycle_slots
+                    ]
+            else:
+                sse_logger.warning("No data in cache, falling back to database")
+                # Fallback to database if cache is empty
+                car_slots = ParkingSlot.objects.filter(vehicle_type='car')
+                motorcycle_slots = ParkingSlot.objects.filter(vehicle_type='motorcycle')
+                available_car_slots = car_slots.filter(status='available').count()
+                available_motorcycle_slots = motorcycle_slots.filter(status='available').count()
+                
+                # Format slots data from database
+                car_slots_data = [
+                    {
+                        'slot_number': slot.slot_number,
+                        'sensor_id': slot.sensor_id,
+                        'status': slot.status
+                    } for slot in car_slots
+                ]
+                motorcycle_slots_data = [
+                    {
+                        'slot_number': slot.slot_number,
+                        'sensor_id': slot.sensor_id,
+                        'status': slot.status
+                    } for slot in motorcycle_slots
+                ]
+            
+            # Calculate total available slots
+            total_available = available_car_slots + available_motorcycle_slots
+            
+            # Format the data for the public display
+            data = {
+                'total_available': total_available,
+                'available_car_slots': available_car_slots,
+                'available_motorcycle_slots': available_motorcycle_slots,
+                'car_slots': car_slots_data,
+                'motorcycle_slots': motorcycle_slots_data
+            }
+            
+            # Send the event
+            event_data = json.dumps(data)
+            sse_logger.debug(f"Sending SSE event with {len(car_slots_data)} car slots and {len(motorcycle_slots_data)} motorcycle slots")
+            yield f"data: {event_data}\n\n"
+            sse_logger.info(f"SSE event sent successfully - Total Available: {total_available} (Cars: {available_car_slots}, Motorcycles: {available_motorcycle_slots})")
+            
+            time.sleep(1)  # Check for updates every second
+            
+        except Exception as e:
+            sse_logger.error(f"Error in public slots SSE stream: {str(e)}")
+            error_data = json.dumps({'error': str(e), 'timestamp': str(timezone.now())})
+            yield f"data: {error_data}\n\n"
+            time.sleep(1)  # Wait before retrying
+
 @csrf_exempt
 @require_GET
 def public_slots_updates(request):
@@ -269,74 +381,8 @@ def public_slots_updates(request):
     Server-Sent Events (SSE) endpoint specifically for the public slots display
     Streams only the count of available slots
     """
-    def event_stream():
-        sse_logger.info("Public Slots SSE Stream Initialization")
-        
-        # Send headers for SSE
-        response = StreamingHttpResponse(content_type='text/event-stream')
-        response['Cache-Control'] = 'no-cache'
-        response['X-Accel-Buffering'] = 'no'
-        
-        while True:
-            try:
-                # Get the Redis cache
-                cache = caches['default']
-                
-                # Try to get parking data from cache
-                parking_data = cache.get('parking_slots_status')
-                
-                if parking_data:
-                    # Parse the cached JSON data
-                    try:
-                        if isinstance(parking_data, str):
-                            parking_stats = json.loads(parking_data)
-                        else:
-                            parking_stats = parking_data
-                            
-                        available_car_slots = sum(1 for slot in parking_stats.values() 
-                                                if slot.get('vehicle_type') == 'car' and 
-                                                slot.get('status') == 'available')
-                        available_motorcycle_slots = sum(1 for slot in parking_stats.values() 
-                                                       if slot.get('vehicle_type') == 'motorcycle' and 
-                                                       slot.get('status') == 'available')
-                    except (json.JSONDecodeError, KeyError) as e:
-                        sse_logger.error(f"Error parsing cache data: {e}")
-                        # Fallback to database
-                        car_slots = ParkingSlot.objects.filter(vehicle_type='car')
-                        motorcycle_slots = ParkingSlot.objects.filter(vehicle_type='motorcycle')
-                        available_car_slots = car_slots.filter(status='available').count()
-                        available_motorcycle_slots = motorcycle_slots.filter(status='available').count()
-                else:
-                    # Fallback to database if cache is empty
-                    car_slots = ParkingSlot.objects.filter(vehicle_type='car')
-                    motorcycle_slots = ParkingSlot.objects.filter(vehicle_type='motorcycle')
-                    available_car_slots = car_slots.filter(status='available').count()
-                    available_motorcycle_slots = motorcycle_slots.filter(status='available').count()
-                
-                # Calculate total available slots
-                total_available = available_car_slots + available_motorcycle_slots
-                
-                # Format the data for the public display
-                data = {
-                    'total_available': total_available,
-                    'available_car_slots': available_car_slots,
-                    'available_motorcycle_slots': available_motorcycle_slots
-                }
-                
-                # Send initial data immediately
-                yield f"data: {json.dumps(data)}\n\n"
-                
-                # Flush the response to ensure data is sent
-                if hasattr(response, 'flush'):
-                    response.flush()
-                    
-                time.sleep(1)  # Check for updates every second
-                
-            except Exception as e:
-                sse_logger.error(f"Error in public slots SSE stream: {str(e)}")
-                time.sleep(1)  # Wait before retrying
-    
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    sse_logger.info(f"New SSE connection from {request.META.get('REMOTE_ADDR')}")
+    response = StreamingHttpResponse(stream_public_slots(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
