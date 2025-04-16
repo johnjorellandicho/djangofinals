@@ -705,8 +705,16 @@ def analytics(request):
             filename = f'ParkSense_Daily_Report_{target_date}.xlsx'
         
         elif report_type == 'monthly':
-            month = int(request.GET.get('month', today.month))
-            year = int(request.GET.get('year', today.year))
+
+            month_param = request.GET.get('month', f"{today.year}-{today.month:02d}")
+            # Split the year-month string and convert to integers
+            if '-' in month_param:
+                year, month = map(int, month_param.split('-'))
+            else:
+                # Fallback if only month is provided
+                month = int(month_param)
+                year = int(request.GET.get('year', today.year))
+            
             start_date = datetime(year, month, 1)
             if month == 12:
                 end_date = datetime(year + 1, 1, 1) - timedelta(seconds=1)
