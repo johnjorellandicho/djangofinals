@@ -1676,21 +1676,6 @@ select.form-control {
     transform: rotate(90deg)
 }
 
-#basement1 .slot:nth-child(9) .slottimecontainer {
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    white-space: nowrap;
-}
-
-#basement1 .slot:nth-child(9) .slot-time {
-    display: inline-block;
-    padding: 5px 10px;
-    width: auto;
-    height: auto;
-    transform: rotate(-90deg); /* Counter-rotate the time */
-}
-
 #basement1 .slot:nth-child(10) {
     left: 200px; 
     top: -180px; 
@@ -1742,6 +1727,16 @@ select.form-control {
     left: 250px; 
     top: -1270px; 
     transform: rotate(90deg);
+
+}
+
+.basement1lobby {
+    margin-left: 50px;
+
+}
+
+.basement2lobby {
+    margin-left: 50px;
 
 }
 #basement1 .slot:nth-child(12) .slottimecontainer {
@@ -1798,6 +1793,13 @@ select.form-control {
 
 }
 
+#basement1 .slot:nth-child(9) {
+    left: 570px; 
+    top: 25px; 
+    transform: rotate(90deg)
+}
+
+
 #basement1 .slot:nth-child(19) {
     left: 700px; 
     top: -3160px; 
@@ -1813,86 +1815,65 @@ select.form-control {
 
 #basement1 .slot:nth-child(21) {
     left: 1000px; 
-    top: -2000px; 
+    top: -1970px; 
     transform: rotate(90deg)
 }
 
 #basement1 .slot:nth-child(22) {
     left: 1000px; 
-    top: -2300px; 
+    top: -2240px; 
     transform: rotate(90deg)
 }
 #basement1 .slot:nth-child(23) {
     left: 1000px;
-    top: -2600px; /* For slot 23 (2300 - 300 = 2600) */
+    top: -2520px; /* For slot 23 (2300 - 300 = 2600) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(24) {
     left: 1000px;
-    top: -2900px; /* For slot 24 (2600 - 300 = 2900) */
+    top: -2800px; /* For slot 24 (2600 - 300 = 2900) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(25) {
     left: 1000px;
-    top: -3200px; /* For slot 25 (2900 - 300 = 3200) */
+    top: -3080px; /* For slot 25 (2900 - 300 = 3200) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(26) {
     left: 1000px;
-    top: -3500px; /* For slot 26 (3200 - 300 = 3500) */
+    top: -3360px; /* For slot 26 (3200 - 300 = 3500) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(27) {
     left: 1000px;
-    top: -3800px; /* For slot 27 (3500 - 300 = 3800) */
+    top: -3640px; /* For slot 27 (3500 - 300 = 3800) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(28) {
     left: 1000px;
-    top: -4100px; /* For slot 28 (3800 - 300 = 4100) */
+    top: -3920px; /* For slot 28 (3800 - 300 = 4100) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(29) {
     left: 1000px;
-    top: -4400px; /* For slot 29 (4100 - 300 = 4400) */
+    top: -4200px; /* For slot 29 (4100 - 300 = 4400) */
     transform: rotate(90deg);
 }
 
 #basement1 .slot:nth-child(30) {
     left: 1000px;
-    top: -4700px; /* For slot 30 (4400 - 300 = 4700) */
-    transform: rotate(90deg);
-}
-#basement1 .slot:nth-child(31) {
-    left: 1000px;
-    top: -5000px; /* For slot 31 (4700 - 300 = 5000) */
+    top: -4480px;
     transform: rotate(90deg);
 }
 
-#basement1 .slot:nth-child(32) {
-    left: 1000px;
-    top: -5300px; /* For slot 32 (5000 - 300 = 5300) */
-    transform: rotate(90deg);
-}
 
-#basement1 .slot:nth-child(33) {
-    left: 1000px;
-    top: -5600px; /* For slot 33 (5300 - 300 = 5600) */
-    transform: rotate(90deg);
-}
 
-#basement1 .slot:nth-child(34) {
-    left: 1000px;
-    top: -5900px; /* For slot 34 (5600 - 300 = 5900) */
-    transform: rotate(90deg);
-    margin-bottom: -4000px;
-}
 
 #basement2 .slot:nth-child(1) {
     left: 200px;
